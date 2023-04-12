@@ -7,6 +7,7 @@
 #![no_std]
 #![no_main]
 use embedded_graphics::mono_font::ascii::FONT_4X6;
+use embedded_hal::digital::v2::InputPin;
 use fugit::HertzU32;
 use fugit::MicrosDurationU32;
 use fugit::RateExtU32;
@@ -130,7 +131,19 @@ fn main() -> ! {
 
     display.update().unwrap();
 
+    let button_a = pins.sw_a.into_pull_down_input();
+    let button_b = pins.sw_b.into_pull_down_input();
+    let button_c = pins.sw_c.into_pull_down_input();
+    let mut pause: bool = false;
     loop {
+                if !button_c.is_low().unwrap() {
+                    pause = !pause;
+                }
+                // else if button_b.is_low().unwrap(){
+                //     pause = false;
+                // }
+                if !pause {
+
         let bounds = Rectangle::new(Point::new(0, current), Size::new(WIDTH, 8));
 
         bounds
@@ -156,8 +169,9 @@ fn main() -> ! {
 
         current = (current + 8) % HEIGHT as i32;
         channel = (channel + 1) % 16;
+                }
 
-        count_down.start(MicrosDurationU32::millis(50));
+        count_down.start(MicrosDurationU32::millis(200));
         let _ = nb::block!(count_down.wait());
     }
 
