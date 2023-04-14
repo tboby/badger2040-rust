@@ -8,12 +8,13 @@
 #![no_main]
 use embedded_graphics::mono_font::ascii::FONT_4X6;
 use embedded_hal::digital::v2::InputPin;
+use embedded_hal::digital::v2::ToggleableOutputPin;
 use fugit::HertzU32;
 use fugit::MicrosDurationU32;
 use fugit::RateExtU32;
 use hal::Clock;
 use pimoroni_badger2040 as bsp;
-
+use rp2040_hal::gpio::Interrupt::EdgeLow;
 use hal::Spi;
 // The macro for our start-up function
 use bsp::entry;
@@ -49,6 +50,12 @@ use embedded_graphics::{
 use uc8151::HEIGHT;
 use uc8151::Uc8151;
 use uc8151::WIDTH;
+use critical_section::Mutex;
+type ButtonPin = bsp::hal::gpio::Pin<bsp::hal::gpio::bank0::Gpio14, bsp::hal::gpio::PullUpInput>;
+type LedPin = bsp::hal::gpio::Pin<bsp::hal::gpio::bank0::Gpio25, bsp::hal::gpio::PushPullOutput>;
+use core::cell::RefCell;
+type LedAndButton = (LedPin, ButtonPin);
+static GLOBAL_PINS: Mutex<RefCell<Option<LedAndButton>>> = Mutex::new(RefCell::new(None));
 
 #[entry]
 fn main() -> ! {
@@ -84,13 +91,15 @@ fn main() -> ! {
         sio.gpio_bank0,
         &mut pac.RESETS,
     );
-
+    let mut enable = pins.p3v3_en.into_push_pull_output();
+    enable.set_high().unwrap();
     // Configure the timer peripheral to be a CountDown timer for our blinky delay
     let timer = Timer::new(pac.TIMER, &mut pac.RESETS);
     let mut delay = timer.count_down();
 
     // Set the LED to be an output
-    let mut led_pin = pins.led.into_push_pull_output();
+    let mut led_pin = pins.led.into_mode();
+    led_pin.set_high().unwrap();
 
 
     // Set up the pins for the e-ink display
@@ -133,46 +142,71 @@ fn main() -> ! {
 
     let button_a = pins.sw_a.into_pull_down_input();
     let button_b = pins.sw_b.into_pull_down_input();
-    let button_c = pins.sw_c.into_pull_down_input();
+    let button_c = pins.sw_c.into_mode();
+    use rp2040_hal::gpio::Interrupt::EdgeLow;
+    button_c.set_interrupt_enabled(EdgeLow, true);
     let mut pause: bool = false;
+    let mut state: bool = true;
+    critical_section::with(|cs| {
+        GLOBAL_PINS.borrow(cs).replace(Some((led_pin, button_c)));
+    });
+    unsafe {
+        pac::NVIC::unmask(pac::Interrupt::IO_IRQ_BANK0);
+    }
+
     loop {
-                if !button_c.is_low().unwrap() {
-                    pause = !pause;
-                }
-                // else if button_b.is_low().unwrap(){
-                //     pause = false;
+        // led_pin.toggle().unwrap();
+
+        // state = !state;
+
+                // if !button_c.is_high().unwrap() {
+                //     // pause = !pause;
+                //     enable.set_low().unwrap();
                 // }
-                if !pause {
+                // if !pause {
+                // led_pin.toggle().unwrap();
 
-        let bounds = Rectangle::new(Point::new(0, current), Size::new(WIDTH, 8));
+                // }
+        //         // else if button_b.is_low().unwrap(){
+        //         //     pause = false;
+        //         // }
+        //         if !pause {
 
-        bounds
-            .into_styled(
-                PrimitiveStyleBuilder::default()
-                    .stroke_color(BinaryColor::Off)
-                    .fill_color(BinaryColor::On)
-                    .stroke_width(1)
-                    .build(),
-            )
-            .draw(&mut display)
-            .unwrap();
+        // let bounds = Rectangle::new(Point::new(0, current), Size::new(WIDTH, 8));
 
-        Text::new(
-            value_text(channel),
-            bounds.center() + Point::new(0, 2),
-            MonoTextStyle::new(&FONT_4X6, BinaryColor::Off),
-        )
-        .draw(&mut display)
-        .unwrap();
+        // bounds
+        //     .into_styled(
+        //         PrimitiveStyleBuilder::default()
+        //             .stroke_color(BinaryColor::Off)
+        //             .fill_color(BinaryColor::On)
+        //             .stroke_width(1)
+        //             .build(),
+        //     )
+        //     .draw(&mut display)
+        //     .unwrap();
 
-        display.partial_update(bounds.try_into().unwrap()).unwrap();
+        // Text::new(
+        //     value_text(channel),
+        //     bounds.center() + Point::new(0, 2),
+        //     MonoTextStyle::new(&FONT_4X6, BinaryColor::Off),
+        // )
+        // .draw(&mut display)
+        // .unwrap();
 
-        current = (current + 8) % HEIGHT as i32;
-        channel = (channel + 1) % 16;
-                }
+        // display.partial_update(bounds.try_into().unwrap()).unwrap();
 
-        count_down.start(MicrosDurationU32::millis(200));
-        let _ = nb::block!(count_down.wait());
+        // current = (current + 8) % HEIGHT as i32;
+        // channel = (channel + 1) % 16;
+        //         }
+        cortex_m::asm::wfi();
+
+        // count_down.start(MicrosDurationU32::millis(200));
+        // let _ = nb::block!(count_down.wait());
+        // enable.set_low().unwrap();
+        // count_down.start(MicrosDurationU32::millis(1000));
+        // let _ = nb::block!(count_down.wait());
+        // state = false;
+        // led_pin.set_state(state.into()).unwrap();
     }
 
     // // Blink the LED at 1 Hz
@@ -187,7 +221,43 @@ fn main() -> ! {
     //     delay.start(900.millis());
     //     let _ = nb::block!(delay.wait());
     // }
+
 }
+use rp2040_pac::interrupt;
+
+#[interrupt]
+fn IO_IRQ_BANK0() {
+    // The `#[interrupt]` attribute covertly converts this to `&'static mut Option<LedAndButton>`
+    static mut LED_AND_BUTTON: Option<LedAndButton> = None;
+
+    // This is one-time lazy initialisation. We steal the variables given to us
+    // via `GLOBAL_PINS`.
+    if LED_AND_BUTTON.is_none() {
+        critical_section::with(|cs| {
+            *LED_AND_BUTTON = GLOBAL_PINS.borrow(cs).take();
+        });
+    }
+
+    // Need to check if our Option<LedAndButtonPins> contains our pins
+    if let Some(gpios) = LED_AND_BUTTON {
+        // borrow led and button by *destructuring* the tuple
+        // these will be of type `&mut LedPin` and `&mut ButtonPin`, so we don't have
+        // to move them back into the static after we use them
+        let (led, button) = gpios;
+        // Check if the interrupt source is from the pushbutton going from high-to-low.
+        // Note: this will always be true in this example, as that is the only enabled GPIO interrupt source
+        if button.interrupt_status(EdgeLow) {
+            // toggle can't fail, but the embedded-hal traits always allow for it
+            // we can discard the return value by assigning it to an unnamed variable
+            let _ = led.toggle();
+
+            // Our interrupt doesn't clear itself.
+            // Do that now so we don't immediately jump back to this interrupt handler.
+            button.clear_interrupt(EdgeLow);
+        }
+    }
+}
+
 
 fn value_text(value: i32) -> &'static str {
     const CHANNEL_NUM: &[&str] = &[
