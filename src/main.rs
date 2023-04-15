@@ -14,7 +14,7 @@ use fugit::MicrosDurationU32;
 use fugit::RateExtU32;
 use hal::Clock;
 use pimoroni_badger2040 as bsp;
-use rp2040_hal::gpio::Interrupt::EdgeLow;
+use rp2040_hal::gpio::Interrupt::EdgeHigh;
 use hal::Spi;
 // The macro for our start-up function
 use bsp::entry;
@@ -51,7 +51,7 @@ use uc8151::HEIGHT;
 use uc8151::Uc8151;
 use uc8151::WIDTH;
 use critical_section::Mutex;
-type ButtonPin = bsp::hal::gpio::Pin<bsp::hal::gpio::bank0::Gpio14, bsp::hal::gpio::PullUpInput>;
+type ButtonPin = bsp::hal::gpio::Pin<bsp::hal::gpio::bank0::Gpio14, bsp::hal::gpio::PullDownInput>;
 type LedPin = bsp::hal::gpio::Pin<bsp::hal::gpio::bank0::Gpio25, bsp::hal::gpio::PushPullOutput>;
 use core::cell::RefCell;
 type LedAndButton = (LedPin, ButtonPin);
@@ -102,56 +102,57 @@ fn main() -> ! {
     led_pin.set_high().unwrap();
 
 
-    // Set up the pins for the e-ink display
-    let _ = pins.sclk.into_mode::<hal::gpio::FunctionSpi>();
-    let _ = pins.mosi.into_mode::<hal::gpio::FunctionSpi>();
-    let spi = hal::Spi::<_, _, 8>::new(pac.SPI0);
-    let dc = pins.inky_dc.into_push_pull_output();
-    let cs = pins.inky_cs_gpio.into_push_pull_output();
-    let busy = pins.inky_busy.into_pull_up_input();
-    let reset = pins.inky_res.into_push_pull_output();
+    // // Set up the pins for the e-ink display
+    // let _ = pins.sclk.into_mode::<hal::gpio::FunctionSpi>();
+    // let _ = pins.mosi.into_mode::<hal::gpio::FunctionSpi>();
+    // let spi = hal::Spi::<_, _, 8>::new(pac.SPI0);
+    // let dc = pins.inky_dc.into_push_pull_output();
+    // let cs = pins.inky_cs_gpio.into_push_pull_output();
+    // let busy = pins.inky_busy.into_pull_up_input();
+    // let reset = pins.inky_res.into_push_pull_output();
 
-    let spi = spi.init(
-        &mut pac.RESETS,
-        &_clocks.peripheral_clock,
-        HertzU32::Hz(1_000_000),
-        &embedded_hal::spi::MODE_0,
-    );
-    let mut count_down = timer.count_down();
+    // let spi = spi.init(
+    //     &mut pac.RESETS,
+    //     &_clocks.peripheral_clock,
+    //     HertzU32::Hz(1_000_000),
+    //     &embedded_hal::spi::MODE_0,
+    // );
+    // let mut count_down = timer.count_down();
 
-    let mut display = Uc8151::new(spi, cs, dc, busy, reset);
-    // Reset display
-    display.disable();
-    count_down.start(MicrosDurationU32::micros(10));
-    let _ = nb::block!(count_down.wait());
-    display.enable();
-    count_down.start(MicrosDurationU32::micros(10));
-    let _ = nb::block!(count_down.wait());
-    // Wait for the screen to finish reset
-    while display.is_busy() {}
+    // let mut display = Uc8151::new(spi, cs, dc, busy, reset);
+    // // Reset display
+    // display.disable();
+    // count_down.start(MicrosDurationU32::micros(10));
+    // let _ = nb::block!(count_down.wait());
+    // display.enable();
+    // count_down.start(MicrosDurationU32::micros(10));
+    // let _ = nb::block!(count_down.wait());
+    // // Wait for the screen to finish reset
+    // while display.is_busy() {}
 
-    let mut delay = cortex_m::delay::Delay::new(cp.SYST, _clocks.system_clock.freq().to_Hz());
+    // let mut delay = cortex_m::delay::Delay::new(cp.SYST, _clocks.system_clock.freq().to_Hz());
 
-    // Initialise display. Using the default LUT speed setting
-    display.setup(&mut delay, uc8151::LUT::Ultrafast).unwrap();
+    // // Initialise display. Using the default LUT speed setting
+    // display.setup(&mut delay, uc8151::LUT::Ultrafast).unwrap();
 
-    let mut current = 0i32;
-    let mut channel = 0;
+    // let mut current = 0i32;
+    // let mut channel = 0;
 
-    display.update().unwrap();
+    // display.update().unwrap();
 
-    let button_a = pins.sw_a.into_pull_down_input();
-    let button_b = pins.sw_b.into_pull_down_input();
+    // let button_a = pins.sw_a.into_pull_down_input();
+    // let button_b = pins.sw_b.into_pull_down_input();
     let button_c = pins.sw_c.into_mode();
-    use rp2040_hal::gpio::Interrupt::EdgeLow;
-    button_c.set_interrupt_enabled(EdgeLow, true);
-    let mut pause: bool = false;
-    let mut state: bool = true;
+    use rp2040_hal::gpio::Interrupt::EdgeHigh;
+    button_c.set_interrupt_enabled(EdgeHigh, true);
+    // let mut pause: bool = false;
+    // let mut state: bool = true;
     critical_section::with(|cs| {
         GLOBAL_PINS.borrow(cs).replace(Some((led_pin, button_c)));
     });
     unsafe {
-        pac::NVIC::unmask(pac::Interrupt::IO_IRQ_BANK0);
+        bsp::pac::NVIC::unmask(bsp::pac::Interrupt::IO_IRQ_BANK0);
+        // pac::NVIC::unmask(pac::Interrupt::IO_IRQ_BANK0);
     }
 
     loop {
@@ -198,6 +199,7 @@ fn main() -> ! {
         // current = (current + 8) % HEIGHT as i32;
         // channel = (channel + 1) % 16;
         //         }
+        // rp2040_pac::
         cortex_m::asm::wfi();
 
         // count_down.start(MicrosDurationU32::millis(200));
@@ -246,14 +248,14 @@ fn IO_IRQ_BANK0() {
         let (led, button) = gpios;
         // Check if the interrupt source is from the pushbutton going from high-to-low.
         // Note: this will always be true in this example, as that is the only enabled GPIO interrupt source
-        if button.interrupt_status(EdgeLow) {
+        if button.interrupt_status(EdgeHigh) {
             // toggle can't fail, but the embedded-hal traits always allow for it
             // we can discard the return value by assigning it to an unnamed variable
             let _ = led.toggle();
 
             // Our interrupt doesn't clear itself.
             // Do that now so we don't immediately jump back to this interrupt handler.
-            button.clear_interrupt(EdgeLow);
+            button.clear_interrupt(EdgeHigh);
         }
     }
 }
