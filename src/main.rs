@@ -59,6 +59,7 @@ static GLOBAL_PINS: Mutex<RefCell<Option<LedAndButton>>> = Mutex::new(RefCell::n
 
 #[entry]
 fn main() -> ! {
+    
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
     let cp = pac::CorePeripherals::take().unwrap();

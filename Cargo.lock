@@ -32,11 +32,14 @@ dependencies = [
  "embedded-hal",
  "fugit",
  "nb 1.1.0",
+ "numtoa",
  "panic-halt",
  "pimoroni_badger2040",
  "rp2040-boot2",
  "rp2040-hal",
  "rp2040-pac",
+ "siphasher",
+ "tickv",
  "uc8151",
 ]
 
@@ -246,6 +249,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "numtoa"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6aa2c4e539b869820a2b82e1aef6ff40aa85e65decdd5185e83fb4b1249cd00f"
+
+[[package]]
 name = "panic-halt"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -386,6 +395,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 
 [[package]]
+name = "siphasher"
+version = "0.3.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7bd3e3206899af3f8b12af284fafc038cc1dc2b41d1b89dd17297221c5d225de"
+
+[[package]]
 name = "stable_deref_trait"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -401,6 +416,12 @@ dependencies = [
  "quote",
  "unicode-ident",
 ]
+
+[[package]]
+name = "tickv"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c61f292d344c68f447d717efc2ebb9b5e9de3c859fef183dd2ab69fa5897f08a"
 
 [[package]]
 name = "uc8151"
