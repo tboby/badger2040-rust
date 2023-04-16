@@ -4,6 +4,8 @@
 #![no_std]
 #![no_main]
 
+use rp2040_panic_usb_boot as _;
+
 use core::hash::Hash;
 use core::hash::Hasher;
 use hal::spi::Enabled;
@@ -17,7 +19,6 @@ use hal::Timer;
 use numtoa::NumToA;
 use pimoroni_badger2040::hal as hal;
 use embedded_hal::digital::v2::OutputPin;
-use panic_halt as _;
 
 
 // How big is your flash? Default for this example is 2MiB
@@ -144,7 +145,7 @@ fn main() -> ! {
     MAIN_KEY.hash(&mut hasher);
     let res = hasher.finish();
     led_pin.set_high().unwrap();
-    let _ = tickv.initialise(res).handle_error(&mut display);
+    tickv.initialise(res).handle_error(&mut display).unwrap();
     led_pin.set_low().unwrap();
 
     // Collect the garbage in case of subsequent calls to ensure there's always

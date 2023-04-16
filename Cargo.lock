@@ -38,6 +38,7 @@ dependencies = [
  "rp2040-boot2",
  "rp2040-hal",
  "rp2040-pac",
+ "rp2040-panic-usb-boot",
  "siphasher",
  "tickv",
  "uc8151",
@@ -368,6 +369,16 @@ dependencies = [
  "cortex-m",
  "cortex-m-rt",
  "vcell",
+]
+
+[[package]]
+name = "rp2040-panic-usb-boot"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b311d2a72e5a63d5511345b61fe7dd02ce0990bd093ba3dc94b3e80b0a0e373"
+dependencies = [
+ "cortex-m",
+ "rp2040-hal",
 ]
 
 [[package]]
