@@ -5,6 +5,7 @@
 #![no_main]
 
 use rp2040_panic_usb_boot as _;
+use tickv::FlashController;
 
 use core::hash::Hash;
 use core::hash::Hasher;
@@ -135,6 +136,10 @@ fn main() -> ! {
     // Setup our TicKV stuff
     let controller = RP2040FlashCtrl::new(FLASH_END_ADDR, STORAGE_SIZE).unwrap();
     let mut storage_buffer = &mut [0; SECTOR_SIZE];
+    for (i, &byte) in b"Test".iter().enumerate() {
+        storage_buffer[i] = byte;
+    }
+    controller.write(0, storage_buffer).unwrap();
     let tickv = TicKV::<RP2040FlashCtrl, { SECTOR_SIZE }>::new(
         controller,
         &mut storage_buffer,

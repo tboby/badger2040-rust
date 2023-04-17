@@ -45,7 +45,7 @@
 #![no_std]
 use core::slice;
 use hal::rom_data;
-use rp2040_hal as hal; // Shortcut
+use pimoroni_badger2040::hal as hal; // Shortcut
 use tickv::{ErrorCode, FlashController};
 
 pub const BLOCK_SIZE: u32 = 65536; // Larger than flash so block_cmd is ignored

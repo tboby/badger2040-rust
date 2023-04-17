@@ -36,7 +36,7 @@ dependencies = [
  "panic-halt",
  "pimoroni_badger2040",
  "rp2040-boot2",
- "rp2040-hal",
+ "rp2040-flash",
  "rp2040-pac",
  "rp2040-panic-usb-boot",
  "siphasher",
@@ -323,6 +323,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c773ec49b836077aa144b58dc7654a243e1eecdb6cf0d25361ae7c7600fabd8"
 dependencies = [
  "crc-any",
+]
+
+[[package]]
+name = "rp2040-flash"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b776d6052f43929ecab6a256389621dfea93563c73ca9d713133502ebc79172"
+dependencies = [
+ "rp2040-hal",
 ]
 
 [[package]]
