@@ -24,7 +24,7 @@ use embedded_hal::digital::v2::OutputPin;
 
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
-use panic_halt as _;
+// use panic_halt as _;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
@@ -59,7 +59,7 @@ static GLOBAL_PINS: Mutex<RefCell<Option<LedAndButton>>> = Mutex::new(RefCell::n
 
 #[entry]
 fn main() -> ! {
-    
+
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
     let cp = pac::CorePeripherals::take().unwrap();

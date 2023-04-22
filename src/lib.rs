@@ -43,6 +43,12 @@
 //! your hardware.  So do some testing and make some guesses 👍
 
 #![no_std]
+#![allow(incomplete_features)]
+#![feature(generic_const_exprs)]
+
+pub mod logic;
+pub mod flash;
+
 use core::slice;
 use hal::rom_data;
 use pimoroni_badger2040::hal as hal; // Shortcut

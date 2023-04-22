@@ -2,5 +2,7 @@
     "rust-analyzer.linkedProjects": [
         ".\\Cargo.toml",
         ".\\Cargo.toml"
-    ]
+    ],
+    "rust-analyzer.cargo.target": "thumbv6m-none-eabi",
+    "rust-analyzer.checkOnSave.allTargets": false
 }

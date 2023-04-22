@@ -1,10 +1,10 @@
 #![no_std]
 #![no_main]
-#![allow(incomplete_features)]
-#![feature(generic_const_exprs)]
 
-mod flash;
 
+use badger2040_rust::logic::dice;
+use badger2040_rust::logic::dice::ElementKind;
+use badger2040_rust::logic::dice::Slot;
 use cortex_m::delay::Delay;
 use embedded_graphics::Drawable;
 use embedded_graphics::mono_font::MonoTextStyle;
@@ -15,16 +15,21 @@ use embedded_graphics::prelude::DrawTarget;
 use embedded_graphics::prelude::Point;
 use embedded_graphics::text::Text;
 use embedded_hal::digital::v2::OutputPin;
+use embedded_layout::chain;
 use embedded_layout::layout::linear::LinearLayout;
 use embedded_layout::prelude::Align;
 use embedded_layout::prelude::Chain;
+use embedded_layout::prelude::Link;
 use embedded_layout::prelude::horizontal;
 use embedded_layout::prelude::vertical;
+use embedded_layout::view_group;
+use embedded_layout::view_group::Views;
 use fugit::HertzU32;
-use numtoa::NumToA;
+use heapless::String;
 use rp2040_panic_usb_boot as _;
-use flash::{Flash, FLASH_ORIGIN};
+use badger2040_rust::flash::{Flash, FLASH_ORIGIN};
 use uc8151::Uc8151;
+use core::array::from_fn;
 use core::mem::size_of;
 use pimoroni_badger2040::hal as hal;
 use pimoroni_badger2040::pac as pac;
@@ -63,21 +68,6 @@ fn checksum(data: &[Slot; 10]) -> u16 {
     sum & 255
 }
 
-#[derive(Copy, Clone)]
-struct Slot {
-    element_type: ElementKind,
-    value: u16
-}
-
-fn slot_to_string(slot: Slot) -> str {
-match slot.element_type {
-            ElementKind::Blank => "",
-            ElementKind::D6 => conf.number.numtoa_str(10, &mut buf),
-            ElementKind::GuardianDie => 2,
-            ElementKind::GrailCoin => 3,
-        };
-
-}
 
 impl Default for Conf {
     fn default() -> Self {
@@ -94,13 +84,6 @@ impl Conf {
     }
 }
 
-#[derive(Copy, Clone)]
-enum ElementKind {
-    Blank,
-    D6,
-    GuardianDie,
-    GrailCoin
-}
 
 
 #[hal::entry]
@@ -174,25 +157,35 @@ fn _main() -> ! {
 
     let mut buf = [0u8; 20];
     let mut iters = 10;
+    let text_style = MonoTextStyle::new(&FONT_10X20, BinaryColor::Off);
 
-    loop {
-        iters = iters - 1;
-        if(iters <= 0){
-            enable.set_low().unwrap();
-            cortex_m::asm::wfi();
-        }
-        delay.delay_ms(500);
+    conf.elements[2] = Slot{ element_type: ElementKind::GrailCoin, value: 1};
+    conf.elements[4] = Slot{ element_type: ElementKind::D6, value: 2};
+    let inter =
+        conf.elements
+        .map(|element| element.slot_to_string());
+    let items : [Text<'_, MonoTextStyle<'_, BinaryColor>>; 10] = from_fn(|idx| Text::new(inter[idx].as_str(), Point::new(0, 0), text_style));
+    // let items = inter2
+    //     .map(|label| Text::new(label, Point::new(0, 0), text_style));
+
+    let chain = Chain::new(items[0])
+        .append(items[1])
+        .append(items[2])
+        .append(items[3])
+        .append(items[4])
+        .append(items[5])
+        .append(items[6])
+        .append(items[7])
+        .append(items[8])
+        .append(items[9]);
+
+
         display.clear(BinaryColor::On).unwrap();
         let display_area = display.bounding_box();
-        let text_style = MonoTextStyle::new(&FONT_10X20, BinaryColor::Off);
             // The layout
     LinearLayout::horizontal(
-        Chain::new(Text::new("a", Point::zero(), text_style))
-            .append(Text::new("b", Point::zero(), text_style))
-            .append(
-                Text::new("c", Point::zero(), text_style)
-            ),
-    )
+        chain
+            )
     .with_alignment(vertical::Center)
     .arrange()
     .align_to(&display_area, horizontal::Center, vertical::Center)
@@ -208,7 +201,10 @@ fn _main() -> ! {
     //     Flash::new(conf).write(FLASH_CONF_ADDR)
     // });
 
-
+    enable.set_low().unwrap();
+    loop {
+        cortex_m::asm::wfi();
     }
+
 }
 
