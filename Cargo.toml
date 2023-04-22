@@ -18,6 +18,7 @@ rp2040-boot2 = { version = "0.2.0", optional = true }
 uc8151 = "0.1.4"
 embedded-graphics-core = { version = "0.3.3", optional = true }
 embedded-graphics = "0.7.1"
+embedded-layout = "0.2.0"
 critical-section = "1.1.1"
 rp2040-pac = "0.4.0"
 tickv = "1.0.0"
