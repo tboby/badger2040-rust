@@ -131,6 +131,7 @@ fn _main() -> ! {
     let mut led_pin: hal::gpio::Pin<hal::gpio::bank0::Gpio25, hal::gpio::Output<hal::gpio::PushPull>> = pins.led.into_push_pull_output();
     let mut enable: hal::gpio::Pin<hal::gpio::bank0::Gpio10, hal::gpio::Output<hal::gpio::PushPull>> = pins.p3v3_en.into_push_pull_output();
     enable.set_high().unwrap();
+    led_pin.set_high().unwrap();
 
     let mut watchdog = Watchdog::new(pac.WATCHDOG);
 
@@ -184,9 +185,6 @@ fn _main() -> ! {
     // conf.elements[4] = Slot{ element_type: ElementKind::D6, value: 2};
 
 
-
-    render(conf, display);
-
     display.update().unwrap();
 
     pins.sw_a.set_interrupt_enabled(EdgeLow, true);
@@ -214,12 +212,6 @@ fn _main() -> ! {
 
 
     cortex_m::asm::wfi();
-
-
-    loop {
-        cortex_m::asm::wfi();
-    }
-
 }
 
 fn render(conf : &Conf, display: &mut Display){
@@ -278,7 +270,6 @@ fn IO_IRQ_BANK0() {
         let conf: Conf = unsafe { Flash::read(FLASH_CONF_ADDR).value().assume_init() };
 
         if conf.is_valid() {
-            gpios.led.set_high().unwrap();
             conf
         } else {
             Default::default()
@@ -322,5 +313,7 @@ fn IO_IRQ_BANK0() {
             conf.checksum = checksum(&conf.elements);
             Flash::new(conf).write(FLASH_CONF_ADDR)
         });
+
+        gpios.enable.set_low().unwrap();
     }
 }
